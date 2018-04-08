@@ -1,6 +1,6 @@
 import cv2
 import face_recognition
-import datetime as dt
+from datetime import datetime, timedelta
 import os
 
 # Get a reference to webcam #0 (the default one)
@@ -19,20 +19,22 @@ for image in os.listdir('images'):
 
 known_face_names_time_hash = {}
 for face_name in known_face_names:
-    known_face_names_time_hash[face_name] = 0
+    known_face_names_time_hash[face_name] = {}
 
 # Initialize some variables
 face_locations = []
 face_encodings = []
 face_names = []
 process_this_frame = True
+# Session Buffer. If face is not detected in 30 Sec, Session is ended.
+max_time_face_not_detected = 30
 
-print("Calculating Time before the machine from now {}".format(dt.datetime.now()))
+print("Calculating Time before the machine from now {}".format(datetime.now()))
 
-prev_frame_time = dt.datetime.now()
+prev_frame_time = datetime.now()
 
 while True:
-    current_frame_time = dt.datetime.now()    
+    current_frame_time = datetime.now()    
 
     # Grab a single frame of video
     ret, frame = video_capture.read()
@@ -59,7 +61,15 @@ while True:
             if True in matches:
                 first_match_index = matches.index(True)
                 name = known_face_names[first_match_index]
-                known_face_names_time_hash[name] += ( current_frame_time - prev_frame_time).microseconds
+                current_length = len(known_face_names_time_hash[name])
+                if (current_length == 0) or (current_frame_time - known_face_names_time_hash[name][current_length-1]['end_time']).total_seconds() > max_time_face_not_detected:
+                    known_face_names_time_hash[name][current_length] = {}
+                    known_face_names_time_hash[name][current_length]['start_time'] = prev_frame_time
+                    known_face_names_time_hash[name][current_length]['end_time'] = current_frame_time
+                    known_face_names_time_hash[name][current_length]['time_diff'] = ( current_frame_time - prev_frame_time).total_seconds()
+                else:
+                    known_face_names_time_hash[name][current_length-1]['end_time'] = current_frame_time
+                    known_face_names_time_hash[name][current_length-1]['time_diff'] += ( current_frame_time - prev_frame_time).total_seconds()
 
             face_names.append(name)
     prev_frame_time = current_frame_time
@@ -85,13 +95,18 @@ while True:
 
     # Hit 'q' on the keyboard to quit!
     if cv2.waitKey(1) & 0xFF == ord('q'):
-        print("Script stopped calculating time at {}".format(dt.datetime.now()))
+        print("Script stopped calculating time at {}".format(datetime.now()))
         break
 
 # Release handle to the webcam
 video_capture.release()
+# Destroy all open windows
 cv2.destroyAllWindows()
 
+# print(known_face_names_time_hash)
 for known_face in known_face_names_time_hash:
-    print("{} worked before this machine for {} Seconds".format(known_face, known_face_names_time_hash[known_face]/1000000))
+    print("{}:".format(known_face))
+    for time_lapse in known_face_names_time_hash[known_face]:
+        time_lapse = known_face_names_time_hash[known_face][time_lapse]
+        print("    Session Started at {}, Ended at {}, Time spent {}".format(time_lapse['start_time'].strftime("%d %b, %Y - %H:%M:%S"), time_lapse['end_time'].strftime("%d %b, %Y - %H:%M:%S"), time_lapse['time_diff']))
 

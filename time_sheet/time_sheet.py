@@ -5,8 +5,9 @@ import os, errno
 import argparse
 import json
 import re
+import csv
 
-args_list = ["known_images_path","download_path"]
+args_list = ["known_images_path","download_path","download_format"]
 white_listed_image_formats = ['jpg','jpeg','png','gif','bmp']
 
 def user_input():
@@ -14,6 +15,7 @@ def user_input():
     config.add_argument('-cf', '--config_file', help='config file name', default='', type=str, required=False)
     config.add_argument('-kip', '--known-images-path', help='Known images path', type=str, required=False)
     config.add_argument('-dp', '--download-path', help='Time sheet save path', type=str, required=False)
+    config.add_argument('-df', '--download-format', help='Type of Download (json, csv, inline)', type=str, required=False)
     config_file_check = config.parse_known_args()
     object_check = vars(config_file_check[0])
 
@@ -33,6 +35,7 @@ def user_input():
         parser = argparse.ArgumentParser()
         parser.add_argument('-kip', '--known-images-path', help='Known images path', type=str, required=False)
         parser.add_argument('-dp', '--download-path', help='Time sheet save path', type=str, required=False)
+        parser.add_argument('-df', '--download-format', help='Type of Download (json, csv, inline)', type=str, required=False)
         args = parser.parse_args()
         arguments = vars(args)
         records = []
@@ -60,16 +63,34 @@ class timesheet:
         # Display the resulting image
         cv2.imshow('Video', frame)
 
-    def display_results(self, known_face_names_time_hash):
-        for known_face in known_face_names_time_hash:
-            print("{}:".format(known_face))
-            for time_lapse in known_face_names_time_hash[known_face]:
-                time_lapse = known_face_names_time_hash[known_face][time_lapse]
-                print("    Session Started at {}, Ended at {}, Time spent {}".format(time_lapse['start_time'].strftime("%d %b, %Y - %H:%M:%S"), time_lapse['end_time'].strftime("%d %b, %Y - %H:%M:%S"), time_lapse['time_diff']))
+    def display_results(self, known_face_names_time_hash, download_path, download_format, start_time, end_time):
+        if download_format == 'inline':
+            for known_face in known_face_names_time_hash:
+                print("{}:".format(known_face))
+                for time_lapse in known_face_names_time_hash[known_face]:
+                    time_lapse = known_face_names_time_hash[known_face][time_lapse]
+                    print("    Session Started at {}, Ended at {}, Time spent {}".format(time_lapse['start_time'].strftime("%d %b, %Y - %H:%M:%S"), time_lapse['end_time'].strftime("%d %b, %Y - %H:%M:%S"), time_lapse['time_diff']))
+        elif download_format == 'json':
+            download_file_name = download_path + '/time_sheet_from_' + start_time.strftime('%c').replace(' ','_').replace(':','_') +'_'+ end_time.strftime('%c').replace(' ','_').replace(':','_') + '.json'
+            with open(download_file_name, 'w') as fp:
+                json.dump(known_face_names_time_hash, fp)
+        elif download_format == 'csv':
+            download_file_name = download_path + '/time_sheet_from_' + start_time.strftime('%c').replace(' ','_').replace(':','_') +'_'+ end_time.strftime('%c').replace(' ','_').replace(':','_') + '.csv'
+            with open(download_file_name, 'w') as f:
+                writer = csv.writer(f)
+                headers = ['Name', 'Session Index', 'Start Time', 'End Time', 'Time Duration']
+                writer.writerow(headers)
+                for known_face in known_face_names_time_hash:
+                    this_row = [known_face]
+                    for time_lapse in known_face_names_time_hash[known_face]:
+                        session = known_face_names_time_hash[known_face][time_lapse]
+                        this_row += [time_lapse+1, session['start_time'].strftime("%d %b %Y - %H:%M:%S"), session['end_time'].strftime("%d %b %Y - %H:%M:%S"), session['time_diff']]
+                        writer.writerow(this_row)
+        else:
+            print('Download type not supported, Displaying in inline mode')
+            self.display_results(known_face_names_time_hash, 'inline')
 
-    def capture(self, known_images_path, download_path):
-        print(known_images_path)
-        print(download_path)
+    def capture(self, known_images_path, download_path, download_format):
         # Get a reference to webcam #0 (the default one)
         video_capture = cv2.VideoCapture(0)
         # Load a sample pictures and learn how to recognize it.
@@ -92,7 +113,8 @@ class timesheet:
         process_this_frame = True
         # Session Buffer. If face is not detected in 30 Sec, Session is ended.
         max_time_face_not_detected = 30
-        print("Script started at {}".format(datetime.now()))
+        start_time = datetime.now()
+        print("Script started at {}".format(start_time))
         prev_frame_time = datetime.now()
 
         while True:
@@ -137,13 +159,14 @@ class timesheet:
 
             # Hit 'q' on the keyboard to quit!
             if cv2.waitKey(1) & 0xFF == ord('q'):
-                print("Script stopped at {}".format(datetime.now()))
+                end_time = datetime.now()
+                print("Script stopped at {}".format(end_time))
                 break
         # Release handle to the webcam
         video_capture.release()
         # Destroy all open windows
         cv2.destroyAllWindows()
-        self.display_results(known_face_names_time_hash)
+        self.display_results(known_face_names_time_hash, download_path, download_format, start_time, end_time)
 
 def check_if_known_images_path_contains_images(known_images_path):
     return_val = ''
@@ -181,11 +204,16 @@ def main():
             break
         else:
             arguments['known_images_path'] = kip_return_val
-        if not arguments['download_path']:
-            arguments['download_path'] = 'downloads'
-        create_download_directory_if_not_exists(arguments['download_path'])
+        if not arguments['download_format']:
+            arguments['download_format'] = 'inline'
+
+        if not arguments['download_format'] == 'inline':
+            if not arguments['download_path']:
+                arguments['download_path'] = 'downloads'
+            create_download_directory_if_not_exists(arguments['download_path'])
+
         response = timesheet()
-        response.capture(arguments['known_images_path'], arguments['download_path'])
+        response.capture(arguments['known_images_path'], arguments['download_path'], arguments['download_format'])
 
 
 if __name__ == "__main__":

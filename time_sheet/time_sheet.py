@@ -1,15 +1,19 @@
 import cv2
 import face_recognition
 from datetime import datetime, timedelta
-import os
+import os, errno
 import argparse
 import json
+import re
 
 args_list = ["known_images_path","download_path"]
+white_listed_image_formats = ['jpg','jpeg','png','gif','bmp']
 
 def user_input():
     config = argparse.ArgumentParser()
     config.add_argument('-cf', '--config_file', help='config file name', default='', type=str, required=False)
+    config.add_argument('-kip', '--known-images-path', help='Known images path', type=str, required=False)
+    config.add_argument('-dp', '--download-path', help='Time sheet save path', type=str, required=False)
     config_file_check = config.parse_known_args()
     object_check = vars(config_file_check[0])
 
@@ -71,9 +75,6 @@ class timesheet:
         # Load a sample pictures and learn how to recognize it.
         known_face_names = []
         known_face_encodings = []
-        if not known_images_path:
-            known_images_path = 'images'
-
         for image in os.listdir(known_images_path):
             # Load the picture
             loaded_image = face_recognition.load_image_file("{}/{}".format(known_images_path,image))
@@ -144,15 +145,47 @@ class timesheet:
         cv2.destroyAllWindows()
         self.display_results(known_face_names_time_hash)
 
+def check_if_known_images_path_contains_images(known_images_path):
+    return_val = ''
+    if not os.path.exists(known_images_path):
+        print("{} directory doesn't exist".format(known_images_path))
+        return return_val
+
+    files = os.listdir(known_images_path)
+    if not len(files):
+        print("{} directory doesn't contain any images".format(known_images_path))
+    else:
+        if not len(re.findall('|'.join(white_listed_image_formats),''.join(files))):
+            print("Please use one of the file extensions of images {}".format(','.join(white_listed_image_formats)))
+        else:
+            return_val = known_images_path
+    return return_val
+
+def create_download_directory_if_not_exists(download_path):
+    if not os.path.exists(download_path):
+        print("Creating {} path as the directory doesn't exist".format(download_path))
+        try:
+            os.makedirs(download_path)
+        except OSError as e:
+            print("Error occured while creating directory {}".format(download_path))
+            if e.errno != errno.EEXIST:
+                raise
+
 def main():
     records = user_input()
-    # print(records)
     for arguments in records:
-        response = timesheet()
-        if (arguments['known_images_path'] or arguments['download_path']):
-            response.capture(arguments['known_images_path'], arguments['download_path'])
+        if not arguments['known_images_path']:
+            arguments['known_images_path'] = 'images'
+        kip_return_val = check_if_known_images_path_contains_images(arguments['known_images_path'])
+        if not kip_return_val:
+            break
         else:
-            response.capture('images/','downloads/')
+            arguments['known_images_path'] = kip_return_val
+        if not arguments['download_path']:
+            arguments['download_path'] = 'downloads'
+        create_download_directory_if_not_exists(arguments['download_path'])
+        response = timesheet()
+        response.capture(arguments['known_images_path'], arguments['download_path'])
 
 
 if __name__ == "__main__":

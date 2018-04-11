@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 from codecs import open
 from os import path
 
-__version__ = '1.0.6'
+__version__ = '1.0.7'
 
 here = path.abspath(path.dirname(__file__))
 
@@ -26,7 +26,7 @@ setup(
     download_url='https://github.com/NoSkillGuy/time_sheet/tarball/' + __version__,
     license='MIT',
     classifiers=[
-        'Development Status :: 1 - Beta',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2.7',

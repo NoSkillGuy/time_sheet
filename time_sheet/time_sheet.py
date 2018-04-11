@@ -13,9 +13,9 @@ white_listed_image_formats = ['jpg','jpeg','png','gif','bmp']
 def user_input():
     config = argparse.ArgumentParser()
     config.add_argument('-cf', '--config_file', help='config file name', default='', type=str, required=False)
-    config.add_argument('-kip', '--known-images-path', help='Known images path', type=str, required=False)
-    config.add_argument('-dp', '--download-path', help='Time sheet save path', type=str, required=False)
-    config.add_argument('-df', '--download-format', help='Type of Download (json, csv, inline)', type=str, required=False)
+    config.add_argument('-kip', '--known_images_path', help='Known images path', type=str, required=False)
+    config.add_argument('-dp', '--download_path', help='Time sheet save path', type=str, required=False)
+    config.add_argument('-df', '--download_format', help='Type of Download (json, csv, inline)', type=str, required=False)
     config_file_check = config.parse_known_args()
     object_check = vars(config_file_check[0])
 
@@ -33,9 +33,9 @@ def user_input():
     else:
         # Taking command line arguments from users
         parser = argparse.ArgumentParser()
-        parser.add_argument('-kip', '--known-images-path', help='Known images path', type=str, required=False)
-        parser.add_argument('-dp', '--download-path', help='Time sheet save path', type=str, required=False)
-        parser.add_argument('-df', '--download-format', help='Type of Download (json, csv, inline)', type=str, required=False)
+        parser.add_argument('-kip', '--known_images_path', help='Known images path', type=str, required=False)
+        parser.add_argument('-dp', '--download_path', help='Time sheet save path', type=str, required=False)
+        parser.add_argument('-df', '--download_format', help='Type of Download (json, csv, inline)', type=str, required=False)
         args = parser.parse_args()
         arguments = vars(args)
         records = []

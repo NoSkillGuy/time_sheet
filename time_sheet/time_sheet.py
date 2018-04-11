@@ -22,12 +22,11 @@ def user_input():
     if object_check['config_file'] != '':
         records = []
         json_file = json.load(open(config_file_check[0].config_file))
-        for record in range(0,len(json_file['Records'])):
-            arguments = {}
-            for i in args_list:
-                arguments[i] = None
-            for key, value in json_file['Records'][record].items():
-                arguments[key] = value
+        arguments = {}
+        for i in args_list:
+            arguments[i] = None
+        for key in json_file['Arguments']:
+            arguments[key] = json_file['Arguments'][key]
             records.append(arguments)
         records_count = len(records)
     else:
@@ -72,8 +71,21 @@ class timesheet:
                     print("    Session Started at {}, Ended at {}, Time spent {}".format(time_lapse['start_time'].strftime("%d %b, %Y - %H:%M:%S"), time_lapse['end_time'].strftime("%d %b, %Y - %H:%M:%S"), time_lapse['time_diff']))
         elif download_format == 'json':
             download_file_name = download_path + '/time_sheet_from_' + start_time.strftime('%c').replace(' ','_').replace(':','_') +'_'+ end_time.strftime('%c').replace(' ','_').replace(':','_') + '.json'
+            # Need to convert all datetime objects to string as they are not JSON parsable.
+            print(known_face_names_time_hash)
+            converted_known_face_times_hash = {}
+            for known_face in known_face_names_time_hash:
+                converted_known_face_times_hash[known_face] = {}
+                for time_lapse in known_face_names_time_hash[known_face]:
+                    converted_known_face_times_hash[known_face][time_lapse] = {}
+                    current_time_lapse = known_face_names_time_hash[known_face][time_lapse]
+                    converted_time_lapse = converted_known_face_times_hash[known_face][time_lapse]
+                    converted_time_lapse['start_time'] = current_time_lapse['start_time'].strftime('%c')
+                    converted_time_lapse['end_time'] = current_time_lapse['end_time'].strftime('%c')
+                    converted_time_lapse['time_diff'] = current_time_lapse['time_diff']
+
             with open(download_file_name, 'w') as fp:
-                json.dump(known_face_names_time_hash, fp)
+                json.dump(converted_known_face_times_hash, fp)
         elif download_format == 'csv':
             download_file_name = download_path + '/time_sheet_from_' + start_time.strftime('%c').replace(' ','_').replace(':','_') +'_'+ end_time.strftime('%c').replace(' ','_').replace(':','_') + '.csv'
             with open(download_file_name, 'w') as f:
@@ -116,7 +128,6 @@ class timesheet:
         start_time = datetime.now()
         print("Script started at {}".format(start_time))
         prev_frame_time = datetime.now()
-
         while True:
             # Get the time at the current frame
             current_frame_time = datetime.now()    
@@ -217,6 +228,7 @@ def main():
 
         response = timesheet()
         response.capture(arguments['known_images_path'], arguments['download_path'], arguments['download_format'])
+        return 0
 
 
 if __name__ == "__main__":

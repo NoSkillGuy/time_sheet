@@ -231,3 +231,13 @@ Anyone is welcomed to contribute to this script.
 If you would like to make a change, open a pull request.
 For issues and discussion visit the
 `Issue Tracker <https://github.com/NoSkillGuy/time_sheet/issues>`__.
+
+In Development
+==============
+
+If this project gets 10 Stars, then i will work on the following 
+
+1. Implementing a command line utility for taking a snapshot so that one can easily add his/her picture before trying out `timesheet`
+2. Documentation 
+3. Examples
+4. Tests
